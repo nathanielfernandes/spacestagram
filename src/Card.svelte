@@ -1,11 +1,18 @@
 <script>
-  import { APODS } from "./stores";
+  import { APODS, preview } from "./stores";
 
   import { fly, fade, slide } from "svelte/transition";
-  export let apod, i;
+  export let apod;
 
+  let i = apod.index;
+  // $: liked = $APODS[i].liked;
   function like() {
     $APODS[i].liked = !$APODS[i].liked;
+    APODS.set($APODS);
+  }
+
+  function full_preview() {
+    preview.set(apod);
   }
 
   // remove unwated info
@@ -17,15 +24,9 @@
   const options = { year: "numeric", month: "long", day: "numeric" };
 </script>
 
-<div
-  transition:fly
-  class="card"
-  style={`background-image: url(${
-    apod.media_type === "image" ? apod.url : apod.thumbnail_url
-  });`}
->
+<div transition:fly class="card" style={`background-image: url(${apod.url})`}>
   <i class={`fa${apod.liked ? "s" : "r"} fa-heart`} on:click={like} />
-  <i class="fas fa-expand exp"></i>
+  <i class="fas fa-expand exp" on:click={full_preview} />
 
   <div class="info">
     <h2>{apod.title}</h2>
@@ -38,7 +39,7 @@
     {#if apod.copyright}
       <span class="cp">
         <i class="far fa-copyright" />
-        {apod.copyright}<br>
+        {apod.copyright}<br />
       </span>
     {/if}
     {apod.date.toLocaleDateString("en-US", options)}
@@ -55,7 +56,8 @@
 
 <style>
   .placeholder {
-    padding: 8rem 0.5rem;
+    /* padding: 8rem 0.5rem; */
+    padding: 6rem 0.5rem;
     text-align: left;
     visibility: hidden;
     transition: all 200ms;
@@ -64,9 +66,7 @@
   .card {
     border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12), 0 2px 2px rgba(0, 0, 0, 0.12),
-      0 4px 4px rgba(0, 0, 0, 0.12), 0 8px 8px rgba(0, 0, 0, 0.12),
-      0 16px 16px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--good-shadow);
     background-repeat: no-repeat;
     background-position: center;
     background-size: cover;
@@ -120,7 +120,7 @@
     position: absolute;
     padding: 0;
     margin: 0;
-    bottom: calc(-100% + 16rem);
+    bottom: calc(-100% + 12rem);
     padding: 0.5rem;
     transition: 500ms cubic-bezier(0.7, 0, 0.3, 1);
   }
@@ -143,9 +143,7 @@
   .card:hover > .info * {
     transition-delay: 200ms;
     color: white;
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12), 0 2px 2px rgba(0, 0, 0, 0.12),
-      0 4px 4px rgba(0, 0, 0, 0.12), 0 8px 8px rgba(0, 0, 0, 0.12),
-      0 16px 16px rgba(0, 0, 0, 0.12);
+    text-shadow: var(--good-shadow);
   }
 
   .card:hover > .info {
@@ -153,9 +151,7 @@
   }
 
   .card .date {
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12), 0 2px 2px rgba(0, 0, 0, 0.12),
-      0 4px 4px rgba(0, 0, 0, 0.12), 0 8px 8px rgba(0, 0, 0, 0.12),
-      0 16px 16px rgba(0, 0, 0, 0.12);
+    text-shadow: var(--good-shadow);
     position: absolute;
     color: rgba(255, 255, 255, 0.279);
     bottom: 0.5rem;
@@ -173,9 +169,7 @@
   }
 
   .card .copyright {
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12), 0 2px 2px rgba(0, 0, 0, 0.12),
-      0 4px 4px rgba(0, 0, 0, 0.12), 0 8px 8px rgba(0, 0, 0, 0.12),
-      0 16px 16px rgba(0, 0, 0, 0.12);
+    text-shadow: var(--good-shadow);
     position: absolute;
     color: rgba(255, 255, 255, 0.279);
     bottom: 0.5rem;
@@ -205,5 +199,19 @@
     transition: 200ms;
     cursor: pointer;
     filter: drop-shadow(0 0 0.75rem black);
+    transition: 200ms;
+    opacity: 0;
+  }
+
+  .card:hover > .exp {
+    opacity: 1;
+  }
+
+  .exp:hover {
+    transform: scale(1.2);
+  }
+
+  .exp:active {
+    transform: scale(0.9);
   }
 </style>
