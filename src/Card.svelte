@@ -2,10 +2,8 @@
   import { APODS, preview } from "./stores";
 
   import { fly, fade, slide } from "svelte/transition";
-  export let apod;
+  export let apod, i;
 
-  let i = apod.index;
-  // $: liked = $APODS[i].liked;
   function like() {
     $APODS[i].liked = !$APODS[i].liked;
     APODS.set($APODS);
@@ -31,7 +29,7 @@
   <div class="info">
     <h2>{apod.title}</h2>
     <p class="desc">
-      {apod.explanation}
+      {apod.explanation.length > 0 ? apod.explanation : "."}
     </p>
   </div>
 
@@ -44,13 +42,6 @@
     {/if}
     {apod.date.toLocaleDateString("en-US", options)}
   </span>
-
-  <!-- {#if apod.copyright}
-    <span class="copyright">
-
-    </span>
-  {/if} -->
-
   <p class="placeholder">{apod.explanation}</p>
 </div>
 

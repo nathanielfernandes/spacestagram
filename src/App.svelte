@@ -1,12 +1,16 @@
 <script>
-  import { onMount, tick } from "svelte";
-  import { APODS, preview, api_endpoint, api_key } from "./stores";
+  import { APODS, preview, api_endpoint } from "./stores";
   import { debounce, clickOutside } from "./helpers";
   import Card from "./Card.svelte";
   import BetterGrid from "./BetterGrid.svelte";
 
   const fix = (apod) => {
+    let ogs = {};
+
     return apod
+      .filter((a) =>
+        ogs.hasOwnProperty(a.title) ? false : (ogs[a.title] = true)
+      )
       .filter((a) => a.media_type === "image")
       .map((a) => {
         if (a.liked === undefined || a.liked === null) {
@@ -30,21 +34,23 @@
     return ap.filter(
       (a) =>
         a.title.toLowerCase().includes(s.toLowerCase()) ||
-        a.explanation.toLowerCase().includes(s.toLowerCase())
+        a.explanation.toLowerCase().includes(s.toLowerCase()) ||
+        a.date
+          .toLocaleDateString("en-US")
+          .toLowerCase()
+          .includes(s.toLowerCase())
     );
   }
 
   function index(ap) {
     for (let i = 0; i < ap.length; i++) {
-      ap[i].index = i;
+      ap[i].i = i;
     }
 
     return ap;
   }
 
   const likes_filter = (ap) => ap.filter((a) => a.liked);
-
-  APODS.set(index(fix($APODS)));
 
   let search_term;
   let typing_search_term;
@@ -66,38 +72,58 @@
   //   grid.refreshLayout();
   // }
 
-  onMount(async () => {
-    // const resp = await fetch(
-    //   `${api_endpoint}?api_key=${api_key}&concept_tags=True&count=5&thumbs=True`
-    // );
-    // let json = await resp.json();
-    // console.log(json);
-    // APODS.set(json);
-  });
+  let loaded = false;
+  async function moreApods() {
+    loaded = false;
+    const resp = await fetch(`${api_endpoint}?count=50`);
+    let json = await resp.json();
 
-  // preview.subscribe((value) => {
+    APODS.set(index(fix($APODS.concat(json))));
+    loaded = true;
+  }
 
-  // });
+  async function getApods() {
+    let json;
+    if ($APODS.length == 0) {
+      const resp = await fetch(`${api_endpoint}?count=100`);
+      json = await resp.json();
+    } else {
+      json = $APODS;
+    }
+
+    APODS.set(index(fix(json)));
+    loaded = true;
+  }
+
+  const apodPromise = getApods();
 </script>
 
 <main>
-  <h1><img class="logo" alt="logo" src="./unspace.svg" />Unspace</h1>
+  <h1><img class="logo" alt="logo" src="./unspace.svg" />Spacestagram</h1>
   <h2>Brought to you by NASA's APOD API</h2>
-
-  <input
-    placeholder="filter"
-    on:input={refreshGrid}
-    bind:value={typing_search_term}
-  />
-  <button
-    on:click={() => {
-      filter_likes = !filter_likes;
-    }}>likes</button
-  >
   <!-- back ground stars -->
   <div id="small-stars" />
   <div id="medium-stars" />
   <div id="large-stars" />
+
+  <div class="top">
+    <div class="search-bar">
+      <i class="fas fa-search" />
+      <input
+        placeholder="Search for an image..."
+        on:input={refreshGrid}
+        bind:value={typing_search_term}
+      />
+    </div>
+
+    <button
+      on:click={() => {
+        filter_likes = !filter_likes;
+      }}
+      ><i class={`fas fa-${filter_likes ? "times" : "heart"} likes`} />
+      {filter_likes ? "All Images" : "Liked Images"}</button
+    >
+  </div>
 
   <!-- preview -->
   {#if $preview}
@@ -106,7 +132,6 @@
         class="preview"
         alt={$preview.title}
         src={$preview.hdurl || $preview.url}
-        on:load={() => (image_loaded = true)}
         use:clickOutside
         on:click_outside={() => {
           preview.set();
@@ -118,24 +143,40 @@
   {/if}
 
   <!-- tiles -->
-  <BetterGrid
-    gridGap={"1rem"}
-    colWidth={"minmax(Min(25rem, 100%), 1fr)"}
-    items={apods}
-  >
-    {#each apods as apod}
-      {#if apod}
-        <Card {apod} />
+  {#await apodPromise}
+    <h2 class="loading">
+      Performing deep space scan <i class="fas fa-spinner" />
+    </h2>
+  {:then}
+    {#if apods.length > 0}
+      <BetterGrid
+        gridGap={"1rem"}
+        colWidth={"minmax(Min(25rem, 100%), 1fr)"}
+        items={apods}
+      >
+        {#each apods as apod, _}
+          <Card {apod} i={apod.i} />
+        {/each}
+      </BetterGrid>
+
+      {#if loaded}
+        <h3 class="more" on:click={moreApods}>Load More</h3>
+      {:else}
+        <h2 class="loading">
+          Performing deep space scan <i class="fas fa-spinner" />
+        </h2>
       {/if}
-    {/each}
-  </BetterGrid>
+    {:else}
+      <div class="loading">No Results :(</div>
+    {/if}
+  {:catch error}
+    <div>
+      <h2>Deep space scan failed :(</h2>
+    </div>
+  {/await}
 </main>
 
 <svelte:head>
-  <!-- <link
-    rel="stylesheet"
-    href="https://unpkg.com/@shopify/polaris@7.5.0/build/esm/styles.css"
-  /> -->
   <link
     rel="stylesheet"
     href="https://use.fontawesome.com/releases/v5.15.3/css/all.css"
@@ -146,6 +187,104 @@
   // .container {
   //   position: absolute;
   // }
+
+  .more {
+    font-weight: 800;
+    cursor: pointer;
+    padding: 2rem;
+    transition: 200ms;
+  }
+
+  .more:hover {
+    transform: scale(1.3);
+  }
+
+  .more:active {
+    transform: scale(1.1);
+  }
+
+  .fa-spinner {
+    animation: spin 700ms linear infinite;
+  }
+
+  .loading {
+    margin: 1rem 0rem;
+    padding: 2rem;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .top {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 1rem;
+  }
+  .search-bar {
+    width: 80%;
+    background-color: white;
+    border-radius: 5px;
+
+    height: 2rem;
+    justify-content: left;
+    text-align: left;
+    padding: 0rem 1rem;
+    display: flex;
+    align-items: center;
+
+    // overflow: hidden;
+    // border-radius: 5px;
+    // margin-top: 1rem;
+  }
+
+  .search-bar .fa-search {
+    color: grey;
+  }
+
+  .search-bar input {
+    box-sizing: border-box;
+    height: 100%;
+    width: 95%;
+    outline: none;
+    border: none;
+    padding: 0rem 0.5rem;
+    color: rgb(52, 52, 52);
+    font-family: "Roboto", sans-serif;
+    font-weight: 800;
+  }
+
+  .likes {
+    width: 1rem;
+  }
+  .top button {
+    height: 2rem;
+    margin: 0.5rem;
+    border-radius: 5px;
+    outline: none;
+    border: none;
+    color: rgb(107, 107, 107);
+    font-family: "Roboto", sans-serif;
+    font-weight: 800;
+    cursor: pointer;
+    background-color: white;
+    transition: 200ms;
+    width: 8rem;
+  }
+
+  .top button:hover {
+    background-color: rgb(200, 200, 200);
+  }
+
+  .top button:active {
+    background-color: rgb(110, 110, 110);
+  }
 
   .modal {
     position: fixed;
@@ -196,7 +335,7 @@
     color: white;
     margin: 0;
     padding: 0;
-
+    overflow-x: hidden;
     position: relative;
 
     /* overflow: hidden; */
@@ -204,7 +343,7 @@
 
   h1 {
     color: #ffffff;
-    font-size: 4rem;
+    font-size: 4vw;
     font-weight: 600;
     padding: 0.5rem 2rem;
     margin: 0;
@@ -217,21 +356,22 @@
     margin: 0;
     color: rgba(255, 255, 255, 0.9);
     font-weight: 300;
+    font-size: 3vw;
   }
 
   .logo {
-    height: 5rem;
+    height: 5vw;
   }
 
   @function custom-box-shadow($n) {
-    $shadows: random(2000) + "px " + random(2000) + "px 2px #FFF";
+    $shadows: random(2000) + "px " + random(2000) + "px #FFF";
     @for $i from 2 through $n {
       $shadows: $shadows +
         ", " +
         random(2000) +
         "px " +
         random(2000) +
-        "px 2px #FFF";
+        "px #FFF";
     }
     @return unquote($shadows);
   }

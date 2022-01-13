@@ -3,7 +3,7 @@ import {temp} from "./default"
 
 let storedApods = localStorage.getItem("apods");
 if (storedApods === null) {
-    storedApods = temp;
+    storedApods = [];
 } else {
     storedApods = JSON.parse(storedApods);
 }
@@ -17,6 +17,5 @@ APODS.subscribe((value) => {
 
 export const preview = writable();
 
-export const api_endpoint = "https://api.nasa.gov/planetary/apod";
-export const api_key = "EmctfnsF39isdaldNowR3uk0Js7gnjHoOcmkw135";
+export const api_endpoint = "https://apod.nathaniel-fernandes.workers.dev/";
 
