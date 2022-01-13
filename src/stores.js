@@ -1,5 +1,4 @@
 import { writable } from 'svelte/store';
-import {temp} from "./default"
 
 let storedApods = localStorage.getItem("apods");
 if (storedApods === null) {
