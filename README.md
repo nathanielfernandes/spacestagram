@@ -28,7 +28,7 @@ Front-end written in javascript using svelte. I chose svelte because I love work
 
 At the time of creating this project the APOD api was not returning `concept_tags` in their response so the image search functionality only checks the title, description, and date of the images.
 
-To protect my api key I use a [Cloudflare Worker](https://workers.cloudflare.com/) to proxy my site's api requests to the APOD API. (src located in ./extras)
+To protect my api key I use a [Cloudflare Worker](https://workers.cloudflare.com/) as a reverse proxy for my api requests to the APOD API. (src located in ./extras)
 
 The site's design was inspired by [Unsplash](https://unsplash.com/).
 
